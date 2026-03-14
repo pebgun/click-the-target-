@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 const GAME_DURATION_SEC = 30;
+const MISS_PENALTY = 1;
+const SENSITIVITY_KEY = "click-target-sensitivity";
+
+function getSensitivity(): number {
+  if (typeof window === "undefined") return 1;
+  const s = localStorage.getItem(SENSITIVITY_KEY);
+  const n = parseFloat(s ?? "1");
+  return Number.isFinite(n) && n >= 0.5 && n <= 2 ? n : 1;
+}
 
 type ScoreEntry = { name: string; score: number };
 
@@ -68,17 +78,25 @@ export default function Game() {
   const targetSize = Math.max(20, 40 - Math.floor(score / 3) * 4);
 
   const moveTarget = useCallback(() => {
-    const x = Math.random() * 80;
-    const y = Math.random() * 80;
+    const sens = getSensitivity();
+    const range = Math.min(80, 80 * sens);
+    const x = Math.random() * range;
+    const y = Math.random() * range;
     setPosition({ x, y });
   }, []);
 
-  function handleClick() {
+  function handleHit(e: React.MouseEvent) {
+    e.stopPropagation();
     if (gameOver) return;
     if (!gameStarted) setGameStarted(true);
     playClickSound();
     setScore((s) => s + 1);
     moveTarget();
+  }
+
+  function handleMiss() {
+    if (gameOver || !gameStarted) return;
+    setScore((s) => Math.max(0, s - MISS_PENALTY));
   }
 
   // Initial random position
@@ -133,11 +151,19 @@ export default function Game() {
   }
 
   return (
-    <main style={{ textAlign: "center", marginTop: "40px" }}>
+    <main style={{ textAlign: "center", marginTop: "40px", color: "var(--text)" }}>
+      <div style={{ marginBottom: "12px" }}>
+        <Link
+          href="/settings"
+          style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}
+        >
+          Settings
+        </Link>
+      </div>
       <h1>🎯 Click the Target Game</h1>
       <h2>Score: {score}</h2>
       {!gameOver && (
-        <h3 style={{ color: gameStarted ? "#333" : "#888" }}>
+        <h3 style={{ color: gameStarted ? "var(--text)" : "var(--text-muted)" }}>
           Time: {timeLeft}s
         </h3>
       )}
@@ -157,9 +183,11 @@ export default function Game() {
                 style={{
                   padding: "8px 12px",
                   fontSize: "1rem",
-                  border: "1px solid #ccc",
+                  border: "1px solid var(--border)",
                   borderRadius: "6px",
                   width: "160px",
+                  background: "var(--bg-elevated)",
+                  color: "var(--text)",
                 }}
               />
               <button
@@ -170,8 +198,8 @@ export default function Game() {
                   padding: "8px 16px",
                   fontSize: "1rem",
                   cursor: submitting ? "not-allowed" : "pointer",
-                  backgroundColor: "#333",
-                  color: "white",
+                  backgroundColor: "var(--accent)",
+                  color: "var(--bg)",
                   border: "none",
                   borderRadius: "6px",
                 }}
@@ -180,10 +208,10 @@ export default function Game() {
               </button>
             </div>
           ) : (
-            <p style={{ color: "#2e7d32", marginBottom: "8px" }}>Score submitted!</p>
+            <p style={{ color: "var(--success)", marginBottom: "8px" }}>Score submitted!</p>
           )}
           {submitError && (
-            <p style={{ color: "#c62828", marginBottom: "8px" }}>{submitError}</p>
+            <p style={{ color: "var(--error)", marginBottom: "8px" }}>{submitError}</p>
           )}
           <button
             type="button"
@@ -192,8 +220,8 @@ export default function Game() {
               padding: "10px 20px",
               fontSize: "1rem",
               cursor: "pointer",
-              backgroundColor: "#333",
-              color: "white",
+              backgroundColor: "var(--accent)",
+              color: "var(--bg)",
               border: "none",
               borderRadius: "8px",
             }}
@@ -204,19 +232,21 @@ export default function Game() {
       )}
 
       <div
+        onClick={handleMiss}
         style={{
           position: "relative",
           width: "1000px",
           height: "800px",
-          border: "2px solid black",
+          border: "2px solid var(--game-border)",
           margin: "auto",
           pointerEvents: gameOver ? "none" : "auto",
           opacity: gameOver ? 0.7 : 1,
+          cursor: gameStarted && !gameOver ? "crosshair" : "default",
         }}
       >
         {!gameOver && (
           <div
-            onClick={handleClick}
+            onClick={handleHit}
             style={{
               position: "absolute",
               left: `${position.x}%`,
@@ -235,15 +265,15 @@ export default function Game() {
       <p style={{ marginTop: "16px" }}>
         {gameOver
           ? "Click « Play again » to restart."
-          : "Click the red square as fast as you can!"}
+          : "Click the red square! Misses cost 1 point."}
       </p>
 
       <section style={{ marginTop: "32px", maxWidth: "320px", marginLeft: "auto", marginRight: "auto" }}>
         <h3 style={{ marginBottom: "8px" }}>🏆 Global scoreboard</h3>
         {leaderboardLoading ? (
-          <p style={{ color: "#666" }}>Loading…</p>
+          <p style={{ color: "var(--text-muted)" }}>Loading…</p>
         ) : leaderboard.length === 0 ? (
-          <p style={{ color: "#666" }}>No scores yet. Be the first!</p>
+          <p style={{ color: "var(--text-muted)" }}>No scores yet. Be the first!</p>
         ) : (
           <ol style={{ textAlign: "left", paddingLeft: "24px" }}>
             {leaderboard.map((entry, i) => (

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ThemeLoader from "@/components/ThemeLoader";
 
 export const metadata: Metadata = {
   title: "Click the Target Game",
@@ -12,8 +13,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem("click-target-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t;})();`,
+          }}
+        />
+      </head>
+      <body>
+        <ThemeLoader />
+        {children}
+      </body>
     </html>
   );
 }
