@@ -2,7 +2,7 @@ import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
 const SCOREBOARD_KEY = "click_target_scores";
-const TOP_N = 10;
+const TOP_N = 5;
 
 function getRedis() {
   const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
